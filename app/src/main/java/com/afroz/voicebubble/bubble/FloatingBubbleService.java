@@ -1,6 +1,5 @@
 package com.afroz.voicebubble.bubble;
 
-import android.app.Activity;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.PixelFormat;
@@ -18,21 +17,23 @@ import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.afroz.voicebubble.App;
 import com.afroz.voicebubble.R;
+import com.afroz.voicebubble.chat.WakeWordListener;
 import com.afroz.voicebubble.reader.ScreenReaderAccessibilityService;
-import com.afroz.voicebubble.speech.SttEngine;
 import com.afroz.voicebubble.speech.TtsEngine;
-
-import java.util.Locale;
+import com.afroz.voicebubble.speech.TtsEngine.VoiceProfile;
 
 /**
- * Draggable, animated glowing orb (JARVIS). Dragging snaps it to the nearest
- * edge. Tapping it or saying the "Open JARVIS" wake word instantly expands the
- * JARVIS control card and reads the screen on explicit trigger only — there is
- * no random unprompted speech.
+ * Draggable, animated glowing orb (JARVIS).
+ *
+ * Houses the always-on conversational loop via {@link WakeWordListener}: the
+ * assistant continuously listens and, on hearing the wake word
+ * ("हेलो जार्विस" / "Hello Jarvis"), instantly halts any TTS, pulses the
+ * bubble, replies in the deep male voice, and keeps listening for the
+ * follow-up. A voice toggle on the overlay switches between the JARVIS Male
+ * core and the Assistant Female voice.
  */
 public class FloatingBubbleService extends Service {
 
@@ -43,8 +44,9 @@ public class FloatingBubbleService extends Service {
     private WindowManager.LayoutParams cardParams;
     private int screenWidth, screenHeight;
     private Handler handler;
-    private SttEngine sttEngine;
+    private WakeWordListener wakeListener;
     private boolean cardShowing = false;
+    private VoiceProfile currentProfile = VoiceProfile.JARVIS_MALE;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -60,7 +62,6 @@ public class FloatingBubbleService extends Service {
         computeScreenSize();
 
         bubbleView = LayoutInflater.from(this).inflate(R.layout.floating_bubble, null);
-
         params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -79,8 +80,35 @@ public class FloatingBubbleService extends Service {
         startPulseAnimation();
         handleDrag();
 
-        // Pre-warm the assistant so the first command is instant.
+        // Default deep JARVIS male profile applied up front.
+        App.get().getTts().setProfile(VoiceProfile.JARVIS_MALE);
         App.get().getTts().prewarm();
+
+        startConversationLoop();
+    }
+
+    /** Boot the always-on conversational listener. */
+    private void startConversationLoop() {
+        wakeListener = new WakeWordListener();
+        wakeListener.setCallback(new WakeWordListener.Callback() {
+            @Override
+            public void onListening() {
+                // Keep the loop alive; optionally reflect in the card status.
+            }
+
+            @Override
+            public void onWake() {
+                // Instant cue: pulse the bubble to signal the wake.
+                feltScaleAnimation();
+                mainWakePulse();
+            }
+
+            @Override
+            public void onStatus(String status) {
+                setCardStatus(status);
+            }
+        });
+        wakeListener.start(this);
     }
 
     private void computeScreenSize() {
@@ -98,6 +126,15 @@ public class FloatingBubbleService extends Service {
     private void startPulseAnimation() {
         Animation pulse = AnimationUtils.loadAnimation(this, R.anim.bubble_pulse);
         bubbleView.startAnimation(pulse);
+    }
+
+    private void mainWakePulse() {
+        bubbleView.postDelayed(() -> {
+            if (bubbleView != null) {
+                Animation pulse = AnimationUtils.loadAnimation(this, R.anim.bubble_pulse);
+                bubbleView.startAnimation(pulse);
+            }
+        }, 150);
     }
 
     private void handleDrag() {
@@ -119,9 +156,7 @@ public class FloatingBubbleService extends Service {
                     case MotionEvent.ACTION_MOVE:
                         float dx = event.getRawX() - startRawX;
                         float dy = event.getRawY() - startRawY;
-                        if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
-                            isDragging = true;
-                        }
+                        if (Math.abs(dx) > 12 || Math.abs(dy) > 12) isDragging = true;
                         if (isDragging) {
                             params.x = initialX + (int) dx;
                             params.y = initialY + (int) dy;
@@ -144,13 +179,11 @@ public class FloatingBubbleService extends Service {
     }
 
     // -----------------------------------------------------------
-    // Wake trigger: bubble tap instantly opens JARVIS + reads screen.
+    // Wake via bubble tap: open card, single screen read.
     // -----------------------------------------------------------
     private void onBubbleTap() {
-        TtsEngine tts = App.get().getTts();
         showCard();
-        // Explicit bubble-tap trigger — allowed speech, instant read.
-        tts.speak(getString(R.string.jarvis_active), true);
+        App.get().getTts().speak("जी सर, बताइए", "hi");
         ScreenReaderAccessibilityService.getInstance().triggerRead();
         feltScaleAnimation();
     }
@@ -160,13 +193,11 @@ public class FloatingBubbleService extends Service {
     // -----------------------------------------------------------
     private void showCard() {
         if (cardShowing) {
-            // Retrigger read if already open.
             ScreenReaderAccessibilityService.getInstance().triggerRead();
             return;
         }
         try {
             cardView = LayoutInflater.from(this).inflate(R.layout.jarvis_card, null);
-
             cardParams = new WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.WRAP_CONTENT,
@@ -182,13 +213,21 @@ public class FloatingBubbleService extends Service {
             if (cardParams.y < 0) cardParams.y = 0;
 
             cardView.findViewById(R.id.jarvis_close).setOnClickListener(v -> hideCard());
-            cardView.findViewById(R.id.jarvis_listen).setOnClickListener(v -> startVoiceWake());
+            cardView.findViewById(R.id.jarvis_listen).setOnClickListener(v -> {
+                if (wakeListener != null && !wakeListener.isRunning()) {
+                    wakeListener.start(this);
+                }
+            });
             cardView.findViewById(R.id.jarvis_read).setOnClickListener(v -> {
                 App.get().getTts().speak(getString(R.string.tts_reading_screen), true);
                 ScreenReaderAccessibilityService.getInstance().triggerRead();
             });
+            TextView voiceBtn = cardView.findViewById(R.id.jarvis_voice);
+            updateVoiceLabel(voiceBtn);
+            voiceBtn.setOnClickListener(v -> toggleVoiceProfile(voiceBtn));
             cardView.findViewById(R.id.jarvis_stop).setOnClickListener(v -> {
-                ScreenReaderAccessibilityService.getInstance().stopReading();
+                if (wakeListener != null) wakeListener.stop();
+                App.get().getTts().stop();
                 setCardStatus(getString(R.string.status_ready));
             });
 
@@ -196,6 +235,28 @@ public class FloatingBubbleService extends Service {
             cardShowing = true;
             setCardStatus(getString(R.string.status_ready));
         } catch (Exception ignored) {}
+    }
+
+    private void toggleVoiceProfile(TextView voiceBtn) {
+        currentProfile = (currentProfile == VoiceProfile.JARVIS_MALE)
+                ? VoiceProfile.ASSISTANT_FEMALE
+                : VoiceProfile.JARVIS_MALE;
+        App.get().getTts().setProfile(currentProfile);
+        updateVoiceLabel(voiceBtn);
+        String tag = currentProfile == VoiceProfile.JARVIS_MALE ? "hi" : "hi";
+        App.get().getTts().speak(
+                currentProfile == VoiceProfile.JARVIS_MALE
+                        ? "जार्विस मेल वॉइस चालू"
+                        : "असिस्टेंट फीमेल वॉइस चालू",
+                tag);
+    }
+
+    private void updateVoiceLabel(TextView voiceBtn) {
+        if (voiceBtn != null) {
+            boolean male = (currentProfile == VoiceProfile.JARVIS_MALE);
+            voiceBtn.setText(male ? getString(R.string.voice_male)
+                                  : getString(R.string.voice_female));
+        }
     }
 
     private void hideCard() {
@@ -206,7 +267,6 @@ public class FloatingBubbleService extends Service {
             cardView = null;
             cardShowing = false;
         }
-        stopVoiceWake();
     }
 
     private void repositionCard() {
@@ -224,57 +284,6 @@ public class FloatingBubbleService extends Service {
         if (cardView != null) {
             TextView statusText = cardView.findViewById(R.id.jarvis_status);
             if (statusText != null) statusText.setText(status);
-        }
-    }
-
-    // -----------------------------------------------------------
-    // Voice wake: "Open JARVIS", "Jarvis", "Read Screen", "Stop".
-    // -----------------------------------------------------------
-    private void startVoiceWake() {
-        if (sttEngine == null) {
-            sttEngine = new SttEngine(this);
-        }
-        if (!sttEngine.isAvailable()) {
-            Toast.makeText(this, "Voice not available", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        setCardStatus("Listening...");
-        sttEngine.setListener(new SttEngine.Listener() {
-            @Override
-            public void onResult(String text) {
-                handleWakeCommand(text);
-            }
-
-            @Override
-            public void onError(String message) {
-                setCardStatus(getString(R.string.status_ready));
-            }
-        });
-        sttEngine.startListening("en-US");
-    }
-
-    private void stopVoiceWake() {
-        if (sttEngine != null) {
-            sttEngine.stopListening();
-            sttEngine.setListener(null);
-        }
-    }
-
-    private void handleWakeCommand(String text) {
-        setCardStatus(getString(R.string.status_ready));
-        if (text == null) return;
-        String lower = text.toLowerCase(Locale.US).trim();
-
-        if (lower.contains("open jarvis") || lower.contains("jarvis")) {
-            if (!cardShowing) showCard();
-            App.get().getTts().speak(getString(R.string.jarvis_active), true);
-            ScreenReaderAccessibilityService.getInstance().triggerRead();
-        } else if (lower.contains("read screen") || lower.contains("read")) {
-            App.get().getTts().speak(getString(R.string.tts_reading_screen), true);
-            ScreenReaderAccessibilityService.getInstance().triggerRead();
-        } else if (lower.contains("stop")) {
-            App.get().getTts().speak(getString(R.string.btn_stop), true);
-            ScreenReaderAccessibilityService.getInstance().stopReading();
         }
     }
 
@@ -299,10 +308,9 @@ public class FloatingBubbleService extends Service {
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
-        stopVoiceWake();
-        if (sttEngine != null) {
-            sttEngine.destroy();
-            sttEngine = null;
+        if (wakeListener != null) {
+            wakeListener.destroy();
+            wakeListener = null;
         }
         if (cardView != null && windowManager != null) {
             try {

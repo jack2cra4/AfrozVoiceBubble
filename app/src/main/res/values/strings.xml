@@ -24,6 +24,8 @@
     <string name="read_screen_command">Read Screen</string>
     <string name="stop_command">Stop</string>
     <string name="listen_command">Listen</string>
+    <string name="voice_male">Voice: JARVIS Male</string>
+    <string name="voice_female">Voice: Assistant Female</string>
 
     <!-- Voice feedback -->
     <string name="tts_ready">JARVIS ready</string>

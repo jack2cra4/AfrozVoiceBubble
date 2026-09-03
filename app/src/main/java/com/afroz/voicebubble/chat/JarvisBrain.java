@@ -45,8 +45,12 @@ public class JarvisBrain {
     private static final Map<String, String> EN = new LinkedHashMap<>();
 
     static {
-        HI.put("greet", "नमस्ते सर! आपकी मदद करने के लिए जार्विस तैयार है। आप मुझसे हिंदी या अंग्रेजी में बात कर सकते हैं।");
-        EN.put("greet", "Hello sir! JARVIS is ready to help. You can talk to me in Hindi or English.");
+        // Wake trigger reply (deep male tone, follow-up kept listening).
+        HI.put("wake", "जी अफ़रोज़ सर, बताइए क्या हुक्म है?");
+        EN.put("wake", "Yes sir, I am listening. What shall I check?");
+
+        HI.put("greet", "नमस्ते अफ़रोज़ सर! मैं जार्विस। क्या करूँ आपके लिए?");
+        EN.put("greet", "Hello Afroz sir! I am JARVIS. What may I do for you?");
 
         HI.put("howareyou", "मैं बिल्कुल ठीक हूँ सर, आपकी सेवा में। आप कैसे हैं?");
         EN.put("howareyou", "I'm doing great sir, at your service. How are you?");
@@ -215,7 +219,8 @@ public class JarvisBrain {
 
         // Terminal error help via screen context.
         if (matchesAny(lower, "explain error", "error samjhao", "एरर समझाओ", "what is this error",
-                "this error", "error kya hai", "यह एरर", "bug samjhao", "bug kya")) {
+                "this error", "error kya hai", "यह एरर", "bug samjhao", "bug kya",
+                "how to fix", "kaise fix", "कैसे फिक्स", "fix hoga")) {
             String ctx = resolveScreenReference();
             if (!ctx.isEmpty()) {
                 return explainFromScreen(ctx, L);
@@ -223,6 +228,19 @@ public class JarvisBrain {
             return new JarvisReply(
                     "Could you open the terminal first so I can see the error?",
                     "en", null, "en", false);
+        }
+
+        // "Is this correct?" — validate the command / code currently on screen.
+        if (matchesAny(lower, "sahi hai kya", "सही है", "सही है क्या", "is this correct",
+                "is this right", "theek hai kya", "ठीक है क्या", "is correct")) {
+            return evaluateScreenForCorrectness(L);
+        }
+
+        // "What is happening / what's running?" — summarize the current screen.
+        if (matchesAny(lower, "kya chal raha", "क्या चल", "what is happening", "whats happening",
+                "what is going", "kya ho raha", "क्या हो", "what is going on", "kya chal raha hai",
+                "क्या चल रहा")) {
+            return summarizeScreen(L);
         }
 
         // Time / generic date fallback.
@@ -319,6 +337,77 @@ public class JarvisBrain {
         return new JarvisReply("This is a \"" + issues.get(0) + "\" error. " + fix, "en");
     }
 
+    /**
+     * "Is this correct?" — inspect the latest command/code on screen and give
+     * a clean verdict, never a raw transcription.
+     */
+    private JarvisReply evaluateScreenForCorrectness(String L) {
+        String ctx = resolveScreenReference();
+        if (ctx.isEmpty()) {
+            return new JarvisReply(
+                    "hi".equals(L) ? "सर, फ़िलहाल स्क्रीन पर कुछ नहीं दिख रहा जिसे जाँचा जा सके।"
+                                   : "Sir, there's nothing on screen right now for me to check.",
+                    L);
+        }
+        String lower = ctx.toLowerCase(Locale.US);
+        boolean hasError = lower.contains("error") || lower.contains("exception")
+                || lower.contains("failed") || lower.contains("not found")
+                || lower.contains("permission denied") || lower.contains("command not found");
+        if (hasError) {
+            return new JarvisReply(
+                    "hi".equals(L)
+                        ? "सर, यहाँ एक एरर है, यह बिल्कुल सही नहीं है। "
+                            + fixFor(firstIssue(ctx), L)
+                        : "Sir, there is an error here, so this is not quite correct. "
+                            + fixFor(firstIssue(ctx), L),
+                    L);
+        }
+        return new JarvisReply(
+                "hi".equals(L)
+                    ? "हाँ सर, स्क्रीन पर जो दिख रहा है वह बिल्कुल सही लगता है। यह कमांड रन कर दीजिए।"
+                    : "Yes sir, what is on the screen looks correct. Please go ahead and run the command.",
+                L);
+    }
+
+    /** Summarize what is currently happening on screen (no raw log dump). */
+    private JarvisReply summarizeScreen(String L) {
+        String ctx = resolveScreenReference();
+        if (ctx.isEmpty()) {
+            return new JarvisReply(
+                    "hi".equals(L) ? "सर, फ़िलहाल स्क्रीन पर कुछ नहीं चल रहा दिखता।"
+                                   : "Sir, nothing appears to be running on screen right now.",
+                    L);
+        }
+        List<String> issues = new ArrayList<>();
+        String lower = ctx.toLowerCase(Locale.US);
+        if (lower.contains("error") || lower.contains("exception")) issues.add("एक एरर आया है");
+        if (lower.contains("running") || lower.contains("progress") || lower.contains("installing"))
+            issues.add("कोई कार्य चल रहा है");
+        if (lower.contains("done") || lower.contains("success")) issues.add("कार्य पूर्ण हुआ");
+        if (issues.isEmpty()) issues.add("एक टर्मिनल स्क्रीन खुली है");
+
+        String joined;
+        boolean hi = "hi".equals(L);
+        if (hi) {
+            joined = String.join(", ", issues);
+            return new JarvisReply("सर, अभी " + joined + "।", L);
+        } else {
+            joined = issues.get(0);
+            return new JarvisReply("Sir, right now " + joined + ".", L);
+        }
+    }
+
+    private String firstIssue(String ctx) {
+        String lower = ctx.toLowerCase(Locale.US);
+        if (lower.contains("permission denied")) return "permission denied";
+        if (lower.contains("command not found")) return "command not found";
+        if (lower.contains("no such file")) return "file not found";
+        if (lower.contains("no space left")) return "no disk space";
+        if (lower.contains("connection refused") || lower.contains("could not resolve"))
+            return "network / connection";
+        return "error";
+    }
+
     private String fixFor(String issue, String L) {
         boolean hi = "hi".equals(L);
         switch (issue) {
@@ -343,6 +432,27 @@ public class JarvisBrain {
             default:
                 return hi ? "कृपया एरर मैसेज ध्यान से पढ़ें।" : "Please read the error message carefully.";
         }
+    }
+
+    // ============================================================
+    // Wake-word handling
+    // ============================================================
+
+    /** True if the utterance is a JARVIS wake trigger (Hindi or English). */
+    public boolean isWakeWord(String text) {
+        if (text == null) return false;
+        String t = text.toLowerCase(Locale.US).trim().replaceAll("[!.,?]", "");
+        return t.contains("jarvis") || t.contains("जार्विस") || t.contains("जारविस");
+    }
+
+    /**
+     * Reply used the moment a wake word is detected. Response is voiced in the
+     * detected language via the active (deep male) voice profile.
+     */
+    public JarvisReply respondWake(String lang) {
+        return new JarvisReply(
+                "hi".equals(lang) ? HI.get("wake") : EN.get("wake"),
+                "hi".equals(lang) ? "hi" : "en");
     }
 
     // ============================================================

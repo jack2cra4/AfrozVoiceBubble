@@ -105,6 +105,19 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/jarvis_voice"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:gravity="center"
+        android:text="@string/voice_male"
+        android:textColor="@color/white"
+        android:textSize="12sp"
+        android:background="@color/bubble_dark"
+        android:layout_marginTop="8dp"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <TextView
         android:id="@+id/jarvis_stop"
         android:layout_width="match_parent"
         android:layout_height="40dp"
