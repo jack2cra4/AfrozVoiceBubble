@@ -48,7 +48,7 @@ public class SttEngine {
                 @Override public void onBufferReceived(byte[] buffer) {}
                 @Override public void onEndOfSpeech() {}
                 @Override public void onError(int error) {
-                    if (listener != null) listener.onError("रेकोग्निशन त्रुटि: " + error);
+                    if (listener != null) listener.onError("Recognition error: " + error);
                 }
                 @Override public void onResults(Bundle results) {
                     ArrayList<String> matches =
@@ -56,7 +56,7 @@ public class SttEngine {
                     if (matches != null && !matches.isEmpty()) {
                         if (listener != null) listener.onResult(matches.get(0));
                     } else if (listener != null) {
-                        listener.onError("कुछ नहीं सुना।");
+                        listener.onError("Nothing heard.");
                     }
                 }
                 @Override public void onPartialResults(Bundle partialResults) {}
@@ -67,7 +67,7 @@ public class SttEngine {
 
     public void startListening(String language) {
         if (recognizer == null) {
-            if (listener != null) listener.onError("स्पीच रेकोग्नाइज़र उपलब्ध नहीं है।");
+            if (listener != null) listener.onError("Speech recognizer not available.");
             return;
         }
         try {
@@ -79,7 +79,7 @@ public class SttEngine {
             intent.putExtra("android.speech.extra.PREFER_OFFLINE", true);
             recognizer.startListening(intent);
         } catch (Exception e) {
-            if (listener != null) listener.onError("स्पीच रेकोग्निशन प्रारंभ नहीं हो सका।");
+            if (listener != null) listener.onError("Speech recognition could not start.");
         }
     }
 

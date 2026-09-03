@@ -1,13 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AfrozVoiceBubble</string>
-    <string name="accessibility_service_description">AfrozVoiceBubble Screen Reader: Reads on-screen text and subtitles aloud in Hindi, and detects and explains common Termux/Linux terminal errors. 100% offline and private.</string>
-    <string name="bubble_start">नमस्ते, मैं हिंदी में बोलती हूँ। बबल को छूकर स्क्रीन रीडर चालू करें।</string>
-    <string name="bubble_reader_on">स्क्रीन रीडर चालू</string>
-    <string name="bubble_reader_off">स्क्रीन रीडर बंद</string>
-    <string name="bubble_btn_label">स्कैन</string>
-    <string name="no_text_found">स्क्रीन पर कोई पाठ नहीं मिला।</string>
-    <string name="launch_bubble">बबल चालू करें</string>
-    <string name="stop_bubble">बबल बंद करें</string>
+    <string name="assistant_title">JARVIS</string>
+    <string name="accessibility_service_description">JARVIS Screen Reader: Reads on-screen text and subtitles aloud, and detects and explains common Termux/Linux terminal errors. 100% offline and private.</string>
+
+    <!-- Bubble -->
+    <string name="bubble_btn_label">Scan</string>
+    <string name="bubble_reader_on">Screen Reader ON</string>
+    <string name="bubble_reader_off">Screen Reader OFF</string>
+
+    <!-- JARVIS menu / controls -->
+    <string name="jarvis_active">JARVIS Active</string>
+    <string name="status_ready">Status: Ready</string>
+    <string name="btn_listen">Listen</string>
+    <string name="btn_read_screen">Read Screen</string>
+    <string name="btn_stop">Stop</string>
+    <string name="btn_close">Close</string>
+    <string name="hint_tap_bubble">Tap the glowing orb to wake JARVIS. Say "Open JARVIS" for voice control.</string>
+
+    <!-- Wake command -->
+    <string name="wake_command">Open JARVIS</string>
+    <string name="wake_command_short">Jarvis</string>
+    <string name="read_screen_command">Read Screen</string>
+    <string name="stop_command">Stop</string>
+    <string name="listen_command">Listen</string>
+
+    <!-- Voice feedback -->
+    <string name="tts_ready">JARVIS ready</string>
+    <string name="tts_reading_screen">Reading screen</string>
+    <string name="tts_looking_for_error">I found these errors</string>
+    <string name="no_text_found">No text found on screen.</string>
+
+    <!-- Main Activity -->
+    <string name="launch_bubble">Wake JARVIS</string>
+    <string name="stop_bubble">Shut Down</string>
+    <string name="open_accessibility">Open Accessibility Settings</string>
     <string name="title_activity">AfrozVoiceBubble</string>
 </resources>

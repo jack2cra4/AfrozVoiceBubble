@@ -14,7 +14,6 @@ import android.widget.TextView;
 
 import com.afroz.voicebubble.App;
 import com.afroz.voicebubble.R;
-import com.afroz.voicebubble.speech.TtsEngine;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +21,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Detects common Termux/Linux terminal errors on screen and shows + speaks the
- * fix in clear Hindi. Runs entirely offline.
+ * Detects common Termux/Linux terminal errors on screen, shows and speaks the
+ * fix via the JARVIS assistant. Detection is silent until an actual blocking
+ * error is found — no random unprompted speech.
  */
 public class TermuxErrorHelper {
 
@@ -40,94 +40,94 @@ public class TermuxErrorHelper {
     static {
         register(
             "E: Unable to locate package",
-            "पैकेज नहीं मिला। पहले apt update चलाएं, फिर apt install पैकेज_नाम करें। यदि नहीं होगा तो pkg update आज़माएँ।");
+            "Package not found. Run \"apt update\" first, then \"apt install <package>\". If it still fails, try \"pkg update\".");
         register(
             "Permission denied",
-            "अनुमति नहीं मिली। chmod 755 फ़ाइल का नाम चलाएं। यदि root चाहिए तो su का उपयोग करें।");
+            "Permission denied. Run \"chmod 755 <filename>\". If root is required, use \"su\".");
         register(
             "No space left on device",
-            "डिस्क में जगह नहीं है। df -h देखें फिर apt autoremove करें या पुरानी फ़ाइलें हटाएं।");
+            "No disk space left. Check with \"df -h\", then run \"apt autoremove\" or remove old files.");
         register(
             "Connection refused",
-            "कनेक्शन अस्वीकृत। इंटरनेट जाँचें। VPN चालू है तो बंद करके फिर कोशिश करें।");
+            "Connection refused. Check your internet. If a VPN is on, turn it off and retry.");
         register(
             "Could not resolve host",
-            "DNS हल नहीं हो रहा। termux-change-repo चलाएँ या अन्य नेटवर्क से जुड़ें।");
+            "DNS could not resolve. Run \"termux-change-repo\" or connect to a different network.");
         register(
             "command not found",
-            "कमांड इंस्टॉल नहीं है। pkg install कमांड का नाम चलाकर इंस्टॉल करें। जैसे: pkg install git");
+            "Command not installed. Install it with \"pkg install <name>\", for example \"pkg install git\".");
         register(
             "No such file or directory",
-            "फ़ाइल नहीं मिली। pwd और ls से सही रास्ता देखें, फिर सही path डालें।");
+            "File not found. Use \"pwd\" and \"ls\" to check your current path, then use the correct one.");
         register(
             "Segmentation fault",
-            "सेगमेंटेशन फॉल्ट हुआ। यह मेमोरी समस्या है। कोड में pointer और array की सीमा जाँचें।");
+            "Segmentation fault. This is a memory issue. Check pointers and array bounds in your code.");
         register(
             "fatal:",
-            "घातक त्रुटि। Git में यह अक्सर authentication या network समस्या से आती है।");
+            "Fatal error. In Git this is usually caused by an authentication or network problem.");
         register(
             "error:",
-            "त्रुटि मिली। संदेश ध्यान से पढ़ें, यह बताता है कि क्या गलत है।");
+            "An error was found. Read the message carefully; it tells you what is wrong.");
         register(
             "npm ERR!",
-            "npm त्रुटि। npm cache clean --force चलाएं, फिर npm install। node_modules हटाकर कोशिश करें।");
+            "NPM error. Run \"npm cache clean --force\", then \"npm install\" again. You can also delete node_modules and retry.");
         register(
             "pip: error:",
-            "pip त्रुटि। pip install --upgrade pip चलाएं, फिर दोबारा install करें।");
+            "Pip error. Run \"pip install --upgrade pip\", then reinstall.");
         register(
             "ModuleNotFoundError",
-            "पाइथन मॉड्यूल नहीं मिला। pip install मॉड्यूल_नाम चलाएं।");
+            "Python module not found. Run \"pip install <module>\".");
         register(
             "ImportError",
-            "इम्पोर्ट त्रुटि। pip install --force-reinstall मॉड्यूल_नाम आज़माएँ।");
+            "Import error. Try \"pip install --force-reinstall <module>\".");
         register(
             "OSError:",
-            "ऑपरेटिंग सिस्टम त्रुटि। फ़ाइल अनुमति और रास्ता जाँचें।");
+            "Operating system error. Check file permissions and paths.");
         register(
             "command not found: pkg",
-            "यह Termux नहीं है या Termux सही इंस्टॉल नहीं है। Play Store से Termux इंस्टॉल करें।");
+            "This is not Termux or Termux is not installed properly. Install Termux from the Play Store.");
         register(
             "Fontconfig warning",
-            "यह सिर्फ़ चेतावनी है, इसे अनदेखा कर सकते हैं। कोई असर नहीं होगा।");
+            "This is only a warning, you can ignore it. Nothing is affected.");
         register(
             "denied by selinux",
-            "SELinux ने अनुमति नहीं दी। यह एंड्रॉयड सुरक्षा नीति है, root access चाहिए हो सकता है।");
+            "SELinux denied permission. This is an Android security policy; root access may be required.");
         register(
             "Killed",
-            "प्रक्रिया खत्म हुई, आमतौर पर कम मेमोरी से। अन्य ऐप बंद करें या swap बढ़ाएं।");
+            "Process was killed, usually due to low memory. Close other apps or increase swap.");
         register(
             "cannot allocate memory",
-            "मेमोरी नहीं मिली। अन्य ऐप बंद करें या swap बनाएं।");
+            "Could not allocate memory. Close other apps or create a swap file.");
         register(
             "disk quota exceeded",
-            "डिस्क कोटा भर गया। अनावश्यक फ़ाइलें हटाएं।");
+            "Disk quota reached. Remove unnecessary files.");
         register(
             "bus error",
-            "मेमोरी एलाइनमेंट समस्या। कोड में pointer उपयोग जाँचें।");
+            "Memory alignment issue. Check pointer usage in your code.");
         register(
             "not a git command",
-            "git कमांड इंस्टॉल नहीं। pkg install git चलाएं।");
+            "Git command not installed. Run \"pkg install git\".");
         register(
             "ssh: connect to host",
-            "ssh कनेक्शन विफल। इंटरनेट, की और पोर्ट 22 जाँचें।");
+            "SSH connection failed. Check internet, your key, and port 22.");
         register(
             "refusing to merge unrelated histories",
-            "git merge विफल। git merge --allow-unrelated-histories चलाएं।");
+            "Git merge failed. Run \"git merge --allow-unrelated-histories\".");
         register(
             "remote origin already exists",
-            "remote पहले से है। git remote set-url origin URL चलाएं।");
+            "Remote already exists. Run \"git remote set-url origin <URL>\".");
         register(
             "java.lang.OutOfMemoryError",
-            "जावा मेमोरी खत्म। -Xmx बढ़ाएं, जैसे java -Xmx512m");
+            "Java ran out of memory. Increase -Xmx, for example \"java -Xmx512m\".");
         register(
             "E: Failed to fetch",
-            "डाउनलोड विफल। termux-change-repo से मिरर बदलें और apt update करें।");
+            "Download failed. Change your mirror with \"termux-change-repo\" and run \"apt update\".");
         register(
             "node:internal/modules/cjs/loader",
-            "node.js लोडर त्रुटि। node_modules हटाकर npm install दोबारा करें।");
+            "Node.js loader error. Delete node_modules and rerun \"npm install\".");
         register(
             "Hash Sum mismatch",
-            "पैकेज हैश मेल नहीं। apt clean करें और apt update फिर चलाएं।");
+            "Package hash mismatch. Run \"apt clean\" and \"apt update\" again.");
     }
 
     private static void register(String pattern, String fix) {
@@ -141,7 +141,8 @@ public class TermuxErrorHelper {
     }
 
     /**
-     * Scan terminal text for known errors; on a match show + speak the Hindi fix.
+     * Scan terminal text for known errors; on a real blocking match show and
+     * speak the English fix. Silent otherwise.
      */
     public void analyze(String screenText) {
         if (screenText == null || screenText.isEmpty()) return;
@@ -157,8 +158,7 @@ public class TermuxErrorHelper {
                     lastError = trimmed;
                     final String fix = ERROR_FIXES.get(i);
                     handler.post(() -> showPanel(trimmed, fix));
-                    TtsEngine tts = App.get().getTts();
-                    handler.postDelayed(() -> tts.speak(fix, true), 800);
+                    handler.postDelayed(() -> App.get().getTts().speak(fix, true), 600);
                     return;
                 }
             }

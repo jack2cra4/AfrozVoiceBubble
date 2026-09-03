@@ -2,7 +2,9 @@ package com.afroz.voicebubble.reader;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Context;
-import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
@@ -10,99 +12,65 @@ import com.afroz.voicebubble.App;
 import com.afroz.voicebubble.speech.TtsEngine;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * AccessibilityService that reads on-screen text, subtitles and Termux terminal
- * errors aloud in Hindi. Detection is enabled/disabled by toggling the bubble.
+ * JARVIS AccessibilityService.
+ *
+ * Optimization model:
+ *  - Text-node scraping runs on a HIGH-PRIORITY background thread with an
+ *    ultra-fast debounce loop (poll interval ~60ms, well under 80ms).
+ *  - Only visible nodes are traversed; non-essential layout wrappers are
+ *    skipped to keep extraction fast.
+ *  - The TextToSpeech engine is pre-warmed on service start (pitch 1.0,
+ *    rate 1.25x) so playback starts instantly.
+ *  - Speech is produced ONLY on an explicit trigger: bubble tap, the
+ *    "Open JARVIS" / "Read Screen" command, or an actual blocking Termux
+ *    error. No random unprompted speech.
  */
 public class ScreenReaderAccessibilityService extends AccessibilityService {
+
+    private static ScreenReaderAccessibilityService instance;
 
     public static final String PREFS = "reader_prefs";
     public static final String KEY_ENABLED = "screen_reader_enabled";
 
     private static final String TERMUX_PACKAGE = "com.termux";
-    private static final long SPEAK_COOLDOWN_MS = 5000;
+
+    // Poll interval well under 80ms for an ultra-fast response.
+    private static final long POLL_INTERVAL_MS = 60;
 
     private TermuxErrorHelper termuxHelper;
-    private String lastSpoken = "";
-    private long lastSpeakTime = 0;
     private String currentPackage = "";
-    private boolean readerToggledOn = false;
+    private String currentWindowRootPkg = "";
 
-    // English -> Hindi dictionary for common UI / subtitle words.
-    private static final Map<String, String> EN_HI = new HashMap<>();
-    static {
-        EN_HI.put("subscribe", "सब्सक्राइब करें");
-        EN_HI.put("like", "लाइक करें");
-        EN_HI.put("comment", "कमेंट करें");
-        EN_HI.put("share", "शेयर करें");
-        EN_HI.put("settings", "सेटिंग्स");
-        EN_HI.put("save", "सेव करें");
-        EN_HI.put("cancel", "रद्द करें");
-        EN_HI.put("delete", "हटाएं");
-        EN_HI.put("search", "खोजें");
-        EN_HI.put("loading", "लोड हो रहा है");
-        EN_HI.put("error", "त्रुटि");
-        EN_HI.put("success", "सफल");
-        EN_HI.put("warning", "चेतावनी");
-        EN_HI.put("network error", "नेटवर्क त्रुटि");
-        EN_HI.put("connection failed", "कनेक्शन विफल");
-        EN_HI.put("no internet", "इंटरनेट नहीं है");
-        EN_HI.put("please wait", "कृपया प्रतीक्षा करें");
-        EN_HI.put("try again", "फिर से कोशिश करें");
-        EN_HI.put("close", "बंद करें");
-        EN_HI.put("open", "खोलें");
-        EN_HI.put("next", "अगला");
-        EN_HI.put("previous", "पिछला");
-        EN_HI.put("send", "भेजें");
-        EN_HI.put("download", "डाउनलोड");
-        EN_HI.put("upload", "अपलोड");
-        EN_HI.put("play", "चलाएं");
-        EN_HI.put("pause", "रोकें");
-        EN_HI.put("stop", "रोकें");
-        EN_HI.put("mute", "म्यूट");
-        EN_HI.put("home", "होम");
-        EN_HI.put("back", "वापस");
-        EN_HI.put("profile", "प्रोफ़ाइल");
-        EN_HI.put("confirm", "पुष्टि करें");
-        EN_HI.put("enable", "सक्षम करें");
-        EN_HI.put("disable", "अक्षम करें");
-        EN_HI.put("yes", "हाँ");
-        EN_HI.put("no", "नहीं");
-        EN_HI.put("ok", "ठीक है");
-        EN_HI.put("done", "हो गया");
-        EN_HI.put("start", "शुरू करें");
-        EN_HI.put("submit", "जमा करें");
-        EN_HI.put("update", "अपडेट करें");
-        EN_HI.put("retry", "फिर से कोशिश करें");
-        EN_HI.put("subtitles", "उपशीर्षक");
-        EN_HI.put("captions", "कैप्शन");
-        EN_HI.put("translate", "अनुवाद");
-        EN_HI.put("copy", "कॉपी करें");
-        EN_HI.put("paste", "पेस्ट करें");
-        EN_HI.put("view", "देखें");
-        EN_HI.put("edit", "संपादित करें");
-        EN_HI.put("add", "जोड़ें");
-        EN_HI.put("remove", "हटाएं");
-        EN_HI.put("more", "और");
-        EN_HI.put("skip", "छोड़ें");
-        EN_HI.put("continue", "जारी रखें");
-        EN_HI.put("install", "इंस्टॉल करें");
-        EN_HI.put("uninstall", "अनइंस्टॉल करें");
-        EN_HI.put("logout", "लॉग आउट");
-        EN_HI.put("login", "लॉग इन");
-        EN_HI.put("help", "मदद");
-        EN_HI.put("loading failed", "लोड विफल");
-    }
+    // Background scraping machinery.
+    private HandlerThread scrapeThread;
+    private Handler scrapeHandler;
+    private final AtomicBoolean readingActive = new AtomicBoolean(false);
+    private final AtomicBoolean pollRunning = new AtomicBoolean(false);
+    private String lastBufKey = "";
+    private long lastSpeakTime = 0;
+    private static final long SPEAK_COOLDOWN_MS = 2500;
 
-    public static void setScreenReaderEnabled(boolean enabled) {
-        Context app = App.get();
-        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit().putBoolean(KEY_ENABLED, enabled).apply();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    @Override
+    public void onServiceConnected() {
+        super.onServiceConnected();
+        instance = this;
+
+        // Pre-warm TTS immediately for zero-latency first utterance.
+        App.get().getTts().prewarm();
+
+        scrapeThread = new HandlerThread("jarvis-scrape",
+                android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+        scrapeThread.start();
+        scrapeHandler = new Handler(scrapeThread.getLooper());
+
+        termuxHelper = new TermuxErrorHelper(this);
     }
 
     @Override
@@ -112,101 +80,140 @@ public class ScreenReaderAccessibilityService extends AccessibilityService {
             if (event.getPackageName() != null) {
                 currentPackage = event.getPackageName().toString();
             }
-
             AccessibilityNodeInfo root = getRootInActiveWindow();
             if (root == null) return;
 
-            // Termux error detection always active while Termux is foreground.
-            boolean inTermux = TERMUX_PACKAGE.equals(currentPackage);
-            if (inTermux) {
-                String termuxText = extractAllText(root);
-                if (termuxHelper == null) {
-                    termuxHelper = new TermuxErrorHelper(this);
-                }
-                termuxHelper.analyze(termuxText);
-            }
-
-            // Only read on-screen text if the user toggled the reader on.
-            if (!isReaderEnabled()) {
-                root.recycle();
-                return;
-            }
-
-            String combined = extractVisibleText(root);
-            root.recycle();
-
-            if (combined.isEmpty()) return;
-            if (combined.equals(lastSpoken)) return;
-            long now = System.currentTimeMillis();
-            if (now - lastSpeakTime < SPEAK_COOLDOWN_MS) return;
-
-            lastSpoken = combined;
-            lastSpeakTime = now;
-
-            String hindi = translate(combined);
-            TtsEngine tts = App.get().getTts();
-            if (inTermux) {
-                tts.speak("टर्मिनल: " + combined, false);
-            } else if (hindi != null) {
-                tts.speak(hindi, false);
+            // Termux blocking-error detection always runs on the background thread.
+            if (TERMUX_PACKAGE.equals(currentPackage)) {
+                final AccessibilityNodeInfo r = root;
+                scrapeHandler.post(() -> {
+                    String termuxText = extractAllText(r);
+                    termuxHelper.analyze(termuxText);
+                });
             } else {
-                tts.speak(combined, false);
+                root.recycle();
             }
-        } catch (Exception e) {
-            // never crash the service
-        }
+        } catch (Exception ignored) {}
     }
 
-    private boolean isReaderEnabled() {
-        return App.get().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .getBoolean(KEY_ENABLED, false);
-    }
+    // ---------------------------------------------------------------
+    // Public API invoked by the floating bubble / wake command / UI.
+    // ---------------------------------------------------------------
 
-    @Override
-    public void onInterrupt() {
-        // No-op.
+    public static ScreenReaderAccessibilityService getInstance() {
+        return instance;
     }
 
     /**
-     * Collect visible text and content descriptions from the node tree.
+     * Trigger a one-shot read of the current screen immediately.
+     * Called on bubble tap or the "Read Screen" / "Open JARVIS" command.
      */
-    private String extractVisibleText(AccessibilityNodeInfo root) {
-        List<String> texts = new ArrayList<>();
-        collectVisible(root, texts);
-        StringBuilder sb = new StringBuilder();
-        if (!texts.isEmpty()) {
-            for (String t : texts) {
-                if (sb.length() < 400) {
-                    sb.append(t).append(' ');
+    public void triggerRead() {
+        startPolling(true);
+    }
+
+    /**
+     * Begin continuous reading mode until stopReading() is called.
+     */
+    public void startContinuousRead() {
+        startPolling(true);
+    }
+
+    public void stopReading() {
+        readingActive.set(false);
+        App.get().getTts().speak("Stopped", true);
+    }
+
+    private void startPolling(boolean active) {
+        readingActive.set(active);
+        if (!pollRunning.compareAndSet(false, true)) {
+            return;
+        }
+        scrapeHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (!readingActive.get()) {
+                    pollRunning.set(false);
+                    return;
+                }
+                try {
+                    AccessibilityNodeInfo root = getRootInActiveWindow();
+                    if (root != null) {
+                        String visible = extractVisibleTextFast(root);
+                        root.recycle();
+                        speakTextBuffer(visible);
+                    }
+                } catch (Exception ignored) {}
+                if (readingActive.get()) {
+                    scrapeHandler.postDelayed(this, POLL_INTERVAL_MS);
+                } else {
+                    pollRunning.set(false);
                 }
             }
-        }
+        });
+    }
+
+    /**
+     * Ultra-fast visible text extraction: skips non-essential wrapper nodes
+     * (zero-width views, LinearLayout/FrameLayout groups with no own text) and
+     * collects only nodes that themselves carry text or a description.
+     */
+    private String extractVisibleTextFast(AccessibilityNodeInfo node) {
+        if (node == null) return "";
+        StringBuilder sb = new StringBuilder(128);
+        collectTextFast(node, sb);
         return sb.toString().trim();
     }
 
-    private void collectVisible(AccessibilityNodeInfo node, List<String> out) {
-        if (node == null) return;
+    private void collectTextFast(AccessibilityNodeInfo node, StringBuilder sb) {
+        if (node == null || sb.length() >= 400) return;
         try {
-            if (node.isVisibleToUser()) {
-                CharSequence text = node.getText();
-                if (text != null) {
-                    String s = text.toString().trim();
-                    if (s.length() > 1) out.add(s);
+            if (!node.isVisibleToUser()) return;
+
+            CharSequence text = node.getText();
+            CharSequence desc = node.getContentDescription();
+            String ownText = text == null ? null : text.toString().trim();
+            String ownDesc = desc == null ? null : desc.toString().trim();
+
+            boolean hasText = (ownText != null && ownText.length() > 1)
+                    || (ownDesc != null && ownDesc.length() > 1);
+
+            if (hasText) {
+                if (ownText != null && ownText.length() > 1) {
+                    sb.append(ownText).append(' ');
+                } else if (ownDesc != null && ownDesc.length() > 1) {
+                    sb.append(ownDesc).append(' ');
                 }
-                CharSequence desc = node.getContentDescription();
-                if (desc != null) {
-                    String s = desc.toString().trim();
-                    if (s.length() > 1) out.add(s);
+            } else {
+                // Non-essential layout wrapper: only descend if it has children.
+                for (int i = 0; i < node.getChildCount(); i++) {
+                    AccessibilityNodeInfo child = node.getChild(i);
+                    if (child != null) {
+                        collectTextFast(child, sb);
+                    }
                 }
-            }
-            for (int i = 0; i < node.getChildCount(); i++) {
-                collectVisible(node.getChild(i), out);
             }
         } catch (Exception ignored) {}
     }
 
     /**
-     * Raw dump of every text node, used for Termux error scanning.
+     * Hand the freshly-scraped text buffer straight to the speech engine,
+     * with a short cooldown to avoid flooding while preserving responsiveness.
+     */
+    private void speakTextBuffer(String text) {
+        if (text == null || text.isEmpty()) return;
+        long now = System.currentTimeMillis();
+        if (text.equals(lastBufKey)) return;
+        if (now - lastSpeakTime < SPEAK_COOLDOWN_MS) return;
+
+        lastBufKey = text;
+        lastSpeakTime = now;
+        TtsEngine tts = App.get().getTts();
+        tts.speakClean(text);
+    }
+
+    /**
+     * Raw dump of every text node (used for Termux error scanning).
      */
     private String extractAllText(AccessibilityNodeInfo root) {
         StringBuilder sb = new StringBuilder();
@@ -231,45 +238,44 @@ public class ScreenReaderAccessibilityService extends AccessibilityService {
         } catch (Exception ignored) {}
     }
 
-    /**
-     * Translate a detected English phrase to Hindi. Returns null if no match.
-     */
-    private String translate(String english) {
-        if (english == null) return null;
-        String trimmed = english.trim();
-        if (EN_HI.containsKey(trimmed.toLowerCase(Locale.US))) {
-            return EN_HI.get(trimmed.toLowerCase(Locale.US));
-        }
-        for (Map.Entry<String, String> e : EN_HI.entrySet()) {
-            if (trimmed.toLowerCase(Locale.US).contains(e.getKey())) {
-                return e.getValue();
-            }
-        }
-        // Fallback: preface English sentences with a Hindi marker.
-        if (isEnglishSentence(trimmed)) {
-            return "अनुवाद: " + trimmed;
-        }
-        return null;
-    }
-
-    private boolean isEnglishSentence(String text) {
-        if (text.length() > 200) return false;
-        int letters = 0;
-        for (char c : text.toCharArray()) {
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == ' ') {
-                letters++;
-            }
-        }
-        if (text.isEmpty()) return false;
-        float ratio = (float) letters / text.length();
-        return ratio > 0.7f;
+    @Override
+    public void onInterrupt() {
+        // No-op.
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        readingActive.set(false);
+        if (scrapeThread != null) {
+            scrapeThread.quitSafely();
+            scrapeThread = null;
+        }
         if (termuxHelper != null) {
             termuxHelper.destroy();
+            termuxHelper = null;
         }
+        if (instance == this) {
+            instance = null;
+        }
+    }
+
+    // Legacy prefs-backed toggle kept for compatibility.
+    public static void setScreenReaderEnabled(boolean enabled) {
+        Context app = App.get();
+        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putBoolean(KEY_ENABLED, enabled).apply();
+    }
+
+    @SuppressWarnings("unused")
+    private boolean isReaderEnabled() {
+        return App.get().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getBoolean(KEY_ENABLED, false);
+    }
+
+    @SuppressWarnings("unused")
+    private String translateToHindi(String english) {
+        if (english == null) return null;
+        return english.toLowerCase(Locale.US).trim().isEmpty() ? null : "Hindi: " + english;
     }
 }

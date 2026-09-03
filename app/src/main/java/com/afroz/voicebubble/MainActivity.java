@@ -37,14 +37,14 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             startService(new android.content.Intent(this, FloatingBubbleService.class));
-            Toast.makeText(this, "बबल चालू", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "JARVIS activated", Toast.LENGTH_SHORT).show();
             com.afroz.voicebubble.App.get().getTts()
-                    .speak("नमस्ते, मैं हिंदी में बोलती हूँ।");
+                    .speak("JARVIS ready.");
         });
 
         btnStop.setOnClickListener(v -> {
             stopService(new android.content.Intent(this, FloatingBubbleService.class));
-            Toast.makeText(this, "बबल बंद", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "JARVIS shut down", Toast.LENGTH_SHORT).show();
         });
 
         btnAccessibility.setOnClickListener(v -> openAccessibilitySettings());
@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:" + getPackageName()));
             startActivity(intent);
-            Toast.makeText(this, "कृपया 'अन्य ऐप्स के ऊपर प्रदर्शित करें' अनुमति दें", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Please allow 'Display over other apps'", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -78,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void openAccessibilitySettings() {
         startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-        Toast.makeText(this, "AfrozVoiceBubble सक्षम करें", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Enable AfrozVoiceBubble", Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -87,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_RECORD_AUDIO && grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "माइक्रोफ़ोन अनुमति मिल गई", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Microphone permission granted", Toast.LENGTH_SHORT).show();
         }
     }
 }

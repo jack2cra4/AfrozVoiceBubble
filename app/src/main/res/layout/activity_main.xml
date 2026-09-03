@@ -7,35 +7,57 @@
     android:gravity="center_horizontal">
 
     <ImageView
+        android:id="@+id/logo"
         android:layout_width="120dp"
         android:layout_height="120dp"
         android:layout_marginTop="40dp"
-        android:contentDescription="@string/launch_bubble"
-        android:src="@drawable/bubble_bg"
-        android:padding="20dp" />
+        android:contentDescription="@string/assistant_title"
+        android:src="@drawable/ic_jarvis_logo" />
 
     <TextView
+        android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="@string/app_name"
         android:textColor="@color/bubble_blue"
-        android:textSize="24sp"
+        android:textSize="26sp"
         android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/assistant"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/assistant_title"
+        android:textColor="@color/bubble_dark"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.2" />
+
+    <TextView
+        android:id="@+id/status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/status_ready"
+        android:textColor="@color/text_fix"
+        android:textSize="14sp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="100% ऑफ़लाइन · स्क्रीन रीडर · Termux एरर हेल्पर"
+        android:layout_marginTop="6dp"
+        android:text="@string/hint_tap_bubble"
         android:textColor="@color/black"
-        android:textSize="14sp" />
+        android:textSize="13sp"
+        android:gravity="center" />
 
     <Button
         android:id="@+id/btn_start_bubble"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="32dp"
         android:text="@string/launch_bubble" />
 
     <Button
@@ -50,15 +72,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="एक्सेसिबिलिटी (Accessibility) सेटिंग खोलें" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="बुलबुले को छूकर स्क्रीन रीडर चालू/बंद करें। कोई इंटरनेट की आवश्यकता नहीं।"
-        android:textColor="@color/black"
-        android:textSize="12sp"
-        android:gravity="center" />
+        android:text="@string/open_accessibility" />
 
 </LinearLayout>

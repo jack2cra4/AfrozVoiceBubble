@@ -14,10 +14,11 @@
         android:id="@+id/error_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Termux एरर हेल्पर"
+        android:text="@string/assistant_title"
         android:textColor="@color/bubble_blue"
         android:textSize="15sp"
         android:textStyle="bold"
+        android:letterSpacing="0.15"
         android:layout_marginBottom="6dp" />
 
     <TextView
@@ -52,7 +53,7 @@
             android:layout_width="wrap_content"
             android:layout_height="34dp"
             android:gravity="center"
-            android:text="बोलो"
+            android:text="@string/btn_listen"
             android:textColor="@color/white"
             android:textSize="13sp"
             android:paddingStart="14dp"
@@ -65,7 +66,7 @@
             android:layout_width="wrap_content"
             android:layout_height="34dp"
             android:gravity="center"
-            android:text="बंद"
+            android:text="@string/btn_close"
             android:textColor="@color/white"
             android:textSize="13sp"
             android:paddingStart="14dp"

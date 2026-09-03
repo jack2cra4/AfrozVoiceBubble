@@ -10,9 +10,8 @@
         android:id="@+id/bubble_icon"
         android:layout_width="64dp"
         android:layout_height="64dp"
-        android:src="@drawable/bubble_bg"
+        android:src="@drawable/ic_jarvis_logo"
         android:scaleType="fitCenter"
-        android:padding="10dp"
         android:contentDescription="@string/bubble_btn_label" />
 
     <ImageView
