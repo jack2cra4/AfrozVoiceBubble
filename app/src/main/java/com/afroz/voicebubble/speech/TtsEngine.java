@@ -89,6 +89,18 @@ public class TtsEngine {
         }
     }
 
+    /** Optional speech-rate override (multiplier, e.g. 1.0). Applies live. */
+    public void setRateOverride(float rate) {
+        this.rateOverride = rate;
+        if (ready && tts != null) {
+            try {
+                tts.setSpeechRate(rate);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private float rateOverride = -1f;
+
     /**
      * Dynamically filter available voices and pick the best match for the
      * requested gender + language, then apply pitch/rate for the profile.
@@ -105,7 +117,7 @@ public class TtsEngine {
                 tts.setLanguage(langFor(lang));
             }
             tts.setPitch(p.pitch);
-            tts.setSpeechRate(p.rate);
+            tts.setSpeechRate(rateOverride >= 0f ? rateOverride : p.rate);
         } catch (Exception ignored) {}
     }
 

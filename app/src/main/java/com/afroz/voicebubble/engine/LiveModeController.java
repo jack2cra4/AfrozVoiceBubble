@@ -23,6 +23,7 @@ public class LiveModeController {
 
     private final LocalMemory memory;
     private final ConversationManager conversation;
+    private final SettingsManager settings;
     private final ScreenChangeDetector changeDetector;
     private final OCRManager ocr;
     private final ScreenCaptureManager capture;
@@ -40,9 +41,10 @@ public class LiveModeController {
     private Ui ui;
 
     public LiveModeController(Context context, LocalMemory memory,
-                              ConversationManager conversation) {
+                              ConversationManager conversation, SettingsManager settings) {
         this.memory = memory;
         this.conversation = conversation;
+        this.settings = settings;
         this.changeDetector = new ScreenChangeDetector(350);
         this.ocr = new OCRManager();
         this.capture = new ScreenCaptureManager(context);
@@ -108,8 +110,11 @@ public class LiveModeController {
     }
 
     private void maybeProactive() {
+        if (!settings.isProactive()) return;
         long now = System.currentTimeMillis();
-        if (now - lastProactiveTime < PROACTIVE_COOLDOWN_MS) return;
+        long cooldown = settings.isPerformanceMode() ? PROACTIVE_COOLDOWN_MS * 3
+                                                     : PROACTIVE_COOLDOWN_MS;
+        if (now - lastProactiveTime < cooldown) return;
         String p = conversation.proactiveUpdate();
         if (p != null) {
             lastProactiveTime = now;

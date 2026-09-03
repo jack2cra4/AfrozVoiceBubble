@@ -5,6 +5,9 @@
     <!-- Minimal permissions only: overlay + accessibility + audio for offline STT -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Optional cloud AI support (offline-first: the app works without this).
+         JARVIS only makes cloud calls when the user configures an API key. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Required binding for the system to be able to bind our accessibility service -->
     <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE"
         tools:ignore="ProtectedPermissions" />
@@ -32,6 +35,31 @@
         <service
             android:name=".bubble.FloatingBubbleService"
             android:exported="false" />
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AfrozVoiceBubble" />
+
+        <activity
+            android:name=".AgentsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AfrozVoiceBubble" />
+
+        <activity
+            android:name=".ApisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AfrozVoiceBubble" />
+
+        <activity
+            android:name=".TasksActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AfrozVoiceBubble" />
+
+        <activity
+            android:name=".MemoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AfrozVoiceBubble" />
 
         <!-- Accessibility Service: reads on-screen text & Termux errors -->
         <service

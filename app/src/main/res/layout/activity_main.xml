@@ -1,77 +1,197 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp"
-    android:gravity="center_horizontal">
+    android:background="@color/bg_dark"
+    android:fillViewport="true">
 
-    <ImageView
-        android:id="@+id/logo"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:layout_marginTop="40dp"
-        android:contentDescription="@string/assistant_title"
-        android:src="@drawable/ic_jarvis_logo" />
-
-    <TextView
-        android:id="@+id/title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/app_name"
-        android:textColor="@color/bubble_blue"
-        android:textSize="26sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/assistant"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="@string/assistant_title"
-        android:textColor="@color/bubble_dark"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.2" />
-
-    <TextView
-        android:id="@+id/status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/status_ready"
-        android:textColor="@color/text_fix"
-        android:textSize="14sp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="@string/hint_tap_bubble"
-        android:textColor="@color/black"
-        android:textSize="13sp"
-        android:gravity="center" />
-
-    <Button
-        android:id="@+id/btn_start_bubble"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="@string/launch_bubble" />
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:gravity="center_horizontal">
 
-    <Button
-        android:id="@+id/btn_stop_bubble"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/stop_bubble" />
+        <!-- Glowing circular assistant core with pulsing ring -->
+        <FrameLayout
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginTop="28dp">
 
-    <Button
-        android:id="@+id/btn_open_accessibility"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/open_accessibility" />
+            <ImageView
+                android:id="@+id/core"
+                android:layout_width="88dp"
+                android:layout_height="88dp"
+                android:layout_gravity="center"
+                android:src="@drawable/core_glow"
+                android:contentDescription="@string/dash_title" />
 
-</LinearLayout>
+            <ImageView
+                android:id="@+id/ring"
+                android:layout_width="116dp"
+                android:layout_height="116dp"
+                android:layout_gravity="center"
+                android:src="@drawable/core_ring"
+                android:contentDescription="@string/dash_title" />
+        </FrameLayout>
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/dash_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="@string/dash_title"
+            android:textColor="@color/accent_cyan"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.3" />
+
+        <!-- Greeting -->
+        <TextView
+            android:id="@+id/greeting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/dash_status_idle"
+            android:textColor="@color/text_light"
+            android:textSize="16sp" />
+
+        <!-- Live status -->
+        <TextView
+            android:id="@+id/live_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/dash_status_offline"
+            android:textColor="@color/accent_cyan"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <!-- Scanning line (subtle) -->
+        <View
+            android:id="@+id/scan_effect"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/scan_line" />
+
+        <!-- START LIVE button -->
+        <Button
+            android:id="@+id/btn_start_live"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/btn_start_bg"
+            android:text="@string/dash_start_live"
+            android:textColor="@color/bg_dark"
+            android:textStyle="bold"
+            android:textSize="15sp" />
+
+        <!-- Live watch message (hidden until START) -->
+        <TextView
+            android:id="@+id/watch_msg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            android:text="@string/dash_watching_msg"
+            android:textColor="@color/accent_green"
+            android:textSize="13sp" />
+
+        <!-- Dashboard cards grid -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/card_screen"
+                    style="@style/JarvisCard"
+                    android:text="@string/card_live_screen" />
+
+                <TextView
+                    android:id="@+id/card_voice"
+                    style="@style/JarvisCard"
+                    android:text="@string/card_voice" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/card_tasks"
+                    style="@style/JarvisCard"
+                    android:text="@string/card_tasks" />
+
+                <TextView
+                    android:id="@+id/card_agents"
+                    style="@style/JarvisCard"
+                    android:text="@string/card_agents" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/card_apis"
+                    style="@style/JarvisCard"
+                    android:text="@string/card_apis" />
+
+                <TextView
+                    android:id="@+id/card_memory"
+                    style="@style/JarvisCard"
+                    android:text="@string/card_memory" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/card_settings"
+                    style="@style/JarvisCard"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/card_settings" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Legacy quick buttons kept for compatibility -->
+        <Button
+            android:id="@+id/btn_stop_bubble"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/btn_ghost_bg"
+            android:text="@string/stop_bubble"
+            android:textColor="@color/text_light" />
+
+        <Button
+            android:id="@+id/btn_open_accessibility"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/btn_ghost_bg"
+            android:text="@string/open_accessibility"
+            android:textColor="@color/text_light" />
+
+    </LinearLayout>
+</ScrollView>
