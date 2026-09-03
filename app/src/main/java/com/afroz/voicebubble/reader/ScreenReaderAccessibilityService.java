@@ -83,16 +83,25 @@ public class ScreenReaderAccessibilityService extends AccessibilityService {
             AccessibilityNodeInfo root = getRootInActiveWindow();
             if (root == null) return;
 
-            // Termux blocking-error detection always runs on the background thread.
-            if (TERMUX_PACKAGE.equals(currentPackage)) {
-                final AccessibilityNodeInfo r = root;
-                scrapeHandler.post(() -> {
-                    String termuxText = extractAllText(r);
-                    termuxHelper.analyze(termuxText);
-                });
-            } else {
-                root.recycle();
-            }
+            // Termux blocking-error detection + screen-context capture always
+            // runs on the background thread.
+            final AccessibilityNodeInfo r = root;
+            final boolean isTermux = TERMUX_PACKAGE.equals(currentPackage);
+            scrapeHandler.post(() -> {
+                try {
+                    String text = extractAllText(r);
+                    // Keep a rolling screen snapshot for context comprehension,
+                    // so "this issue" / "यह एरर" can be resolved later.
+                    if (text != null && !text.trim().isEmpty()) {
+                        App.get().getBrain().setScreenContext(text);
+                    }
+                    if (isTermux) {
+                        termuxHelper.analyze(text);
+                    }
+                } finally {
+                    r.recycle();
+                }
+            });
         } catch (Exception ignored) {}
     }
 

@@ -1,19 +1,21 @@
 package com.afroz.voicebubble;
 
 import android.app.Application;
-import android.speech.tts.TextToSpeech;
 
+import com.afroz.voicebubble.chat.JarvisBrain;
 import com.afroz.voicebubble.speech.TtsEngine;
 
 public class App extends Application {
     private static App instance;
     private TtsEngine ttsEngine;
+    private JarvisBrain jarvisBrain;
 
     @Override
     public void onCreate() {
         super.onCreate();
         instance = this;
         ttsEngine = new TtsEngine(this);
+        jarvisBrain = new JarvisBrain();
     }
 
     public static App get() {
@@ -22,5 +24,9 @@ public class App extends Application {
 
     public TtsEngine getTts() {
         return ttsEngine;
+    }
+
+    public JarvisBrain getBrain() {
+        return jarvisBrain;
     }
 }
