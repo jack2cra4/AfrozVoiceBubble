@@ -11,6 +11,7 @@ import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
+import android.view.Display;
 import android.util.DisplayMetrics;
 import android.view.WindowManager;
 
@@ -33,16 +34,27 @@ public class ScreenCaptureManager {
 
     public ScreenCaptureManager(Context context) {
         this.context = context.getApplicationContext();
-        WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-        DisplayMetrics metrics = new DisplayMetrics();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            context.getDisplay().getRealMetrics(metrics);
-        } else if (wm != null) {
-            wm.getDefaultDisplay().getRealMetrics(metrics);
+        width = 1080;
+        height = 1920;
+        density = 420;
+        try {
+            WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            Display display = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display = context.getDisplay();
+            } else if (wm != null) {
+                display = wm.getDefaultDisplay();
+            }
+            if (display != null) {
+                DisplayMetrics metrics = new DisplayMetrics();
+                display.getRealMetrics(metrics);
+                if (metrics.widthPixels > 0) width = metrics.widthPixels;
+                if (metrics.heightPixels > 0) height = metrics.heightPixels;
+                if (metrics.densityDpi > 0) density = metrics.densityDpi;
+            }
+        } catch (Exception ignored) {
+            // Keep safe defaults; capture setup is validated lazily.
         }
-        width = metrics.widthPixels > 0 ? metrics.widthPixels : 1080;
-        height = metrics.heightPixels > 0 ? metrics.heightPixels : 1920;
-        density = metrics.densityDpi > 0 ? metrics.densityDpi : 420;
     }
 
     /** Build the system screen-capture permission intent (launch from Activity). */
