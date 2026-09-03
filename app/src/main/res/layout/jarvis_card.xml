@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/jarvis_card"
-    android:layout_width="240dp"
+    android:layout_width="248dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="#E60A0E16"
@@ -10,6 +10,7 @@
     android:clickable="true"
     android:focusable="true">
 
+    <!-- Header: orb + title + live-state word + close -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -60,16 +61,18 @@
             android:focusable="true" />
     </LinearLayout>
 
+    <!-- LIVE / LISTENING / THINKING / SPEAKING state word -->
     <TextView
-        android:id="@+id/jarvis_big_status"
+        android:id="@+id/jarvis_state"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/jarvis_active"
+        android:text="@string/status_stopped"
         android:textColor="#4DB8FF"
         android:textSize="14sp"
         android:textStyle="bold"
         android:layout_marginBottom="10dp" />
 
+    <!-- START / STOP -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -77,14 +80,52 @@
         android:gravity="center_horizontal">
 
         <TextView
-            android:id="@+id/jarvis_listen"
+            android:id="@+id/jarvis_start"
             android:layout_width="0dp"
             android:layout_height="40dp"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="@string/btn_listen"
+            android:text="@string/control_start"
             android:textColor="@color/white"
             android:textSize="13sp"
+            android:textStyle="bold"
+            android:background="@drawable/bubble_bg"
+            android:layout_marginEnd="6dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/jarvis_stop"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/control_stop"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:background="@color/bubble_dark"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
+
+    <!-- Listen / Read Screen -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_horizontal"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:id="@+id/jarvis_listen"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/btn_listen"
+            android:textColor="@color/white"
+            android:textSize="12sp"
             android:background="@drawable/bubble_bg"
             android:layout_marginEnd="6dp"
             android:clickable="true"
@@ -93,21 +134,36 @@
         <TextView
             android:id="@+id/jarvis_read"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="36dp"
             android:layout_weight="1"
             android:gravity="center"
             android:text="@string/btn_read_screen"
             android:textColor="@color/white"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:background="@drawable/bubble_bg"
             android:clickable="true"
             android:focusable="true" />
     </LinearLayout>
 
+    <!-- Language toggle (Hindi / English / Auto) -->
+    <TextView
+        android:id="@+id/jarvis_lang"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:gravity="center"
+        android:text="@string/lang_auto"
+        android:textColor="@color/white"
+        android:textSize="12sp"
+        android:background="@color/bubble_dark"
+        android:layout_marginTop="8dp"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Voice toggle (Male / Female) -->
     <TextView
         android:id="@+id/jarvis_voice"
         android:layout_width="match_parent"
-        android:layout_height="36dp"
+        android:layout_height="34dp"
         android:gravity="center"
         android:text="@string/voice_male"
         android:textColor="@color/white"
@@ -117,17 +173,40 @@
         android:clickable="true"
         android:focusable="true" />
 
-    <TextView
-        android:id="@+id/jarvis_stop"
+    <!-- Mute + Settings -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:gravity="center"
-        android:text="@string/btn_stop"
-        android:textColor="@color/white"
-        android:textSize="13sp"
-        android:background="@color/bubble_dark"
-        android:layout_marginTop="8dp"
-        android:clickable="true"
-        android:focusable="true" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_horizontal"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:id="@+id/jarvis_mute"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/control_mute"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:background="@color/bubble_dark"
+            android:layout_marginEnd="6dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/jarvis_settings"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/control_settings"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:background="@color/bubble_dark"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
 
 </LinearLayout>

@@ -90,10 +90,16 @@ public class ScreenReaderAccessibilityService extends AccessibilityService {
             scrapeHandler.post(() -> {
                 try {
                     String text = extractAllText(r);
-                    // Keep a rolling screen snapshot for context comprehension,
-                    // so "this issue" / "यह एरर" can be resolved later.
                     if (text != null && !text.trim().isEmpty()) {
+                        // Rolling speech/screen snapshot for conversation
+                        // context comprehension ("this issue" / "यह एरर").
                         App.get().getBrain().setScreenContext(text);
+                        // Feed the modular context/error analysis engine.
+                        App.get().getConversation().ingestScreenText(text);
+                        // In live mode, drive change detection + proactive.
+                        if (App.get().getLiveMode().isLive()) {
+                            App.get().getLiveMode().onAccessibilityScreenText(text);
+                        }
                     }
                     if (isTermux) {
                         termuxHelper.analyze(text);

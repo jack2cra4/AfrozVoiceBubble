@@ -38,4 +38,23 @@
     <string name="stop_bubble">Shut Down</string>
     <string name="open_accessibility">Open Accessibility Settings</string>
     <string name="title_activity">AfrozVoiceBubble</string>
+
+    <!-- Live-mode overlay controls -->
+    <string name="control_start">START</string>
+    <string name="control_stop">STOP</string>
+    <string name="control_mute">Mute</string>
+    <string name="control_unmute">Unmute</string>
+    <string name="control_settings">Settings</string>
+
+    <!-- State words -->
+    <string name="status_stopped">● STOPPED</string>
+    <string name="status_live">● LIVE</string>
+    <string name="status_listening">● LISTENING</string>
+    <string name="status_thinking">● THINKING</string>
+    <string name="status_speaking">● SPEAKING</string>
+
+    <!-- Language modes -->
+    <string name="lang_auto">Language: Auto</string>
+    <string name="lang_hindi">Language: Hindi</string>
+    <string name="lang_english">Language: English</string>
 </resources>
