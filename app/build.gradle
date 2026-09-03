@@ -34,4 +34,6 @@ android {
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
+    // On-device, offline text recognition used by the live screen OCR layer.
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
 }
