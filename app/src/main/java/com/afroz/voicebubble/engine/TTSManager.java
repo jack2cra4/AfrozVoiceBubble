@@ -32,20 +32,10 @@ public class TTSManager {
         // (clears on done/error, so isSpeaking() is not stuck true forever).
         engine.setListener(new UtteranceProgressListener() {
             @Override public void onStart(String utteranceId) { speaking = true; }
-            @Override public void onDone(String utteranceId) {
-                speaking = false;
-                Runnable r = onSpeechDone;
-                if (r != null) r.run();
-            }
-            @Override public void onError(String utteranceId) {
-                speaking = false;
-                Runnable r = onSpeechDone;
-                if (r != null) r.run();
-            }
+            @Override public void onDone(String utteranceId) { finishSpeech(); }
+            @Override public void onError(String utteranceId) { finishSpeech(); }
             @Override @Deprecated public void onError(String utteranceId, int errorCode) {
-                speaking = false;
-                Runnable r = onSpeechDone;
-                if (r != null) r.run();
+                finishSpeech();
             }
         });
     }
@@ -53,6 +43,20 @@ public class TTSManager {
     /** Register a callback fired (on the TTS thread) after speech completes/stops. */
     public void setOnSpeechDone(Runnable r) {
         this.onSpeechDone = r;
+    }
+
+    /** Clear speaking flag + run the done callback safely (TTS thread). */
+    private void finishSpeech() {
+        speaking = false;
+        Runnable r = onSpeechDone;
+        if (r != null) {
+            try {
+                r.run();
+            } catch (Throwable ignored) {
+                // A done-callback must never crash the TTS thread & take down
+                // the whole process.
+            }
+        }
     }
 
     public TtsEngine raw() {

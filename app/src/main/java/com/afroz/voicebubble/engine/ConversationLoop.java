@@ -102,7 +102,13 @@ public class ConversationLoop {
             public void onResult(String text, String lang) {
                 if (!running) return;
                 lastLang = "hi".equals(lang) ? "hi" : "en";
-                process(text, lang);
+                try {
+                    process(text, lang);
+                } catch (Throwable ignored) {
+                    // Never crash the process from a pipeline failure on the
+                    // STT thread; keep listening.
+                    scheduleRelisten();
+                }
             }
 
             @Override
@@ -137,25 +143,35 @@ public class ConversationLoop {
         }
         // Run the full new pipeline on the STT worker thread (network/agents
         // are never on the main thread). Then marshal speech to main.
-        final String response = conversation.respondToSpeech(text, lang);
+        final String response;
+        try {
+            response = conversation.respondToSpeech(text, lang);
+        } catch (Throwable ignored) {
+            scheduleRelisten();
+            return;
+        }
         mainHandler.post(() -> {
-            if (!running && !wake) {
-                // Stopped while processing — never speak late responses.
-                return;
+            try {
+                if (!running && !wake) {
+                    // Stopped while processing — never speak late responses.
+                    return;
+                }
+                if (wake) {
+                    if (callback != null) callback.onWake();
+                } else if (callback != null) {
+                    callback.onStatus("...");
+                }
+                if (response != null && !response.isEmpty()) {
+                    holdMicWhileSpeaking();
+                    tts.setOnSpeechDone(this::resumeAfterSpeech);
+                    tts.speak(response, lang);
+                } else {
+                    scheduleRelisten();
+                }
+                maybeStopLive();
+            } catch (Throwable ignored) {
+                // Speech/post handling must never kill the process.
             }
-            if (wake) {
-                if (callback != null) callback.onWake();
-            } else if (callback != null) {
-                callback.onStatus("...");
-            }
-            if (response != null && !response.isEmpty()) {
-                holdMicWhileSpeaking();
-                tts.setOnSpeechDone(this::resumeAfterSpeech);
-                tts.speak(response, lang);
-            } else {
-                scheduleRelisten();
-            }
-            maybeStopLive();
         });
     }
 

@@ -86,11 +86,16 @@ public class LiveModeController {
      * Proactively speaks only when something worth telling appears.
      */
     public void onAccessibilityScreenText(String text) {
-        if (!live) return;
-        conversation.ingestScreenText(text);
-        String stable = changeDetector.next(text);
-        if (stable != null) {
-            maybeProactive();
+        try {
+            if (!live) return;
+            conversation.ingestScreenText(text);
+            String stable = changeDetector.next(text);
+            if (stable != null) {
+                maybeProactive();
+            }
+        } catch (Throwable ignored) {
+            // Screen-text ingestion/proactive logic must never crash a
+            // background thread (accessibility / OCR) and take down the app.
         }
     }
 
@@ -98,13 +103,17 @@ public class LiveModeController {
     public void onCapturedFrame(Image frame) {
         if (!live || frame == null) return;
         worker.execute(() -> {
-            AtomicReference<String> sink = new AtomicReference<>("");
-            ocr.recognize(frame, 0, sink, () -> {
-                String t = sink.get();
-                if (t != null && !t.trim().isEmpty()) {
-                    onAccessibilityScreenText(t);
-                }
-            });
+            try {
+                AtomicReference<String> sink = new AtomicReference<>("");
+                ocr.recognize(frame, 0, sink, () -> {
+                    String t = sink.get();
+                    if (t != null && !t.trim().isEmpty()) {
+                        onAccessibilityScreenText(t);
+                    }
+                });
+            } catch (Throwable ignored) {
+                // OCR pipeline failure must never crash the worker thread.
+            }
         });
     }
 

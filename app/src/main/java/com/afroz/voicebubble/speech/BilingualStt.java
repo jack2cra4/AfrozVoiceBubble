@@ -68,26 +68,30 @@ public class BilingualStt {
                 @Override public void onBufferReceived(byte[] buffer) {}
                 @Override public void onEndOfSpeech() {}
                 @Override public void onError(int error) {
-                    if (listener != null) listener.onError("Recognition error: " + error);
+                    emitError("Recognition error: " + error);
                 }
                 @Override public void onResults(Bundle results) {
-                    ArrayList<String> matches =
-                            results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if (matches != null && !matches.isEmpty()) {
-                        String text = matches.get(0);
-                        if (listener != null) {
-                            listener.onResult(text, detect(text));
+                    try {
+                        ArrayList<String> matches =
+                                results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                        if (matches != null && !matches.isEmpty()) {
+                            String text = matches.get(0);
+                            if (listener != null) {
+                                listener.onResult(text, detect(text));
+                            }
+                        } else {
+                            emitError("Nothing heard.");
                         }
-                    } else if (listener != null) {
-                        listener.onError("Nothing heard.");
-                    }
+                    } catch (Throwable ignored) {} // never crash the STT binder thread
                 }
                 @Override public void onPartialResults(Bundle partialResults) {
-                    ArrayList<String> parts =
-                            partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if (parts != null && !parts.isEmpty() && listener != null) {
-                        listener.onPartial(parts.get(0));
-                    }
+                    try {
+                        ArrayList<String> parts =
+                                partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                        if (parts != null && !parts.isEmpty() && listener != null) {
+                            listener.onPartial(parts.get(0));
+                        }
+                    } catch (Throwable ignored) {}
                 }
                 @Override public void onEvent(int eventType, Bundle params) {}
             });
@@ -97,7 +101,7 @@ public class BilingualStt {
     /** Start listening using the current session language. */
     public void startListening() {
         if (recognizer == null) {
-            if (listener != null) listener.onError("Speech recognizer not available.");
+            emitError("Speech recognizer not available.");
             return;
         }
         try {
@@ -110,7 +114,17 @@ public class BilingualStt {
             intent.putExtra("android.speech.extra.PREFER_OFFLINE", true);
             recognizer.startListening(intent);
         } catch (Exception e) {
-            if (listener != null) listener.onError("Speech recognition could not start.");
+            emitError("Speech recognition could not start.");
+        }
+    }
+
+    /** Safely notify the listener of an error (binder thread safe). */
+    private void emitError(String message) {
+        if (listener == null) return;
+        try {
+            listener.onError(message);
+        } catch (Throwable ignored) {
+            // A listener failure must never crash the STT binder thread.
         }
     }
 

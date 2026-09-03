@@ -88,16 +88,15 @@ public class ScreenReaderAccessibilityService extends AccessibilityService {
             final AccessibilityNodeInfo r = root;
             final boolean isTermux = TERMUX_PACKAGE.equals(currentPackage);
             scrapeHandler.post(() -> {
+                // Swallow every throwable: this runs on a background thread and
+                // an uncaught exception here would kill the whole shared process
+                // at launch (accessibility binds the service as soon as the app
+                // starts). live-mode/termux processing must never take the app
+                // down; the root node is always recycled.
                 try {
                     String text = extractAllText(r);
                     if (text != null && !text.trim().isEmpty()) {
-                        // Rolling speech/screen snapshot for conversation
-                        // context comprehension ("this issue" / "यह एरर").
                         App.get().getBrain().setScreenContext(text);
-                        // In live mode, feed the modular engine ONCE (ingest +
-                        // change detection + proactive + subtitles + task
-                        // monitoring). Outside live mode we skip this so the
-                        // shared detector is not double-driven per event.
                         if (App.get().getLiveMode().isLive()) {
                             App.get().getLiveMode().onAccessibilityScreenText(text);
                         }
@@ -105,8 +104,12 @@ public class ScreenReaderAccessibilityService extends AccessibilityService {
                     if (isTermux) {
                         termuxHelper.analyze(text);
                     }
+                } catch (Throwable ignored) {
+                    // Continue; never crash the app from background scraping.
                 } finally {
-                    r.recycle();
+                    try {
+                        r.recycle();
+                    } catch (Throwable ignored) {}
                 }
             });
         } catch (Exception ignored) {}

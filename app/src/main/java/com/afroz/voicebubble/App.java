@@ -41,6 +41,7 @@ public class App extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        CrashReporter.install(this);
         instance = this;
         ttsEngine = new TtsEngine(this);
         jarvisBrain = new JarvisBrain();

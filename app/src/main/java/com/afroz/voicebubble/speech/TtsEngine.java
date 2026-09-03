@@ -56,20 +56,32 @@ public class TtsEngine {
 
     public TtsEngine(Context context) {
         this.context = context.getApplicationContext();
-        tts = new TextToSpeech(this.context, status -> {
-            if (status == TextToSpeech.SUCCESS) {
-                // Probe for a Hindi voice but don't lock the engine:
-                // the profile + locale are selected per utterance below.
-                int result = tts.setLanguage(new Locale("hi", "IN"));
-                usingHindi = (result != TextToSpeech.LANG_MISSING_DATA
-                        && result != TextToSpeech.LANG_NOT_SUPPORTED);
-                if (!usingHindi) {
-                    tts.setLanguage(Locale.getDefault());
+        try {
+            tts = new TextToSpeech(this.context, status -> {
+                try {
+                    if (status == TextToSpeech.SUCCESS) {
+                        // Probe for a Hindi voice but don't lock the engine:
+                        // the profile + locale are selected per utterance below.
+                        int result = tts.setLanguage(new Locale("hi", "IN"));
+                        usingHindi = (result != TextToSpeech.LANG_MISSING_DATA
+                                && result != TextToSpeech.LANG_NOT_SUPPORTED);
+                        if (!usingHindi) {
+                            tts.setLanguage(Locale.getDefault());
+                        }
+                        ready = true;
+                        applyProfile(profile, activeLang);
+                    }
+                } catch (Throwable ignored) {
+                    // A broken/absent TTS backend must never crash startup; the
+                    // engine simply stays not-ready and every speak() is a no-op.
                 }
-                ready = true;
-                applyProfile(profile, activeLang);
-            }
-        });
+            });
+        } catch (Throwable ignored) {
+            // TTS binding failed (missing engine / remote exception). Keep the
+            // app fully usable silently; TTS is an optional subsystem.
+            tts = null;
+            ready = false;
+        }
     }
 
     // ============================================================
