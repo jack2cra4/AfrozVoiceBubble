@@ -3,7 +3,7 @@ package com.afroz.voicebubble.engine;
 import android.content.Context;
 import android.media.Image;
 
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -26,7 +26,7 @@ public class LiveModeController {
     private final ScreenChangeDetector changeDetector;
     private final OCRManager ocr;
     private final ScreenCaptureManager capture;
-    private final Executor worker = Executors.newSingleThreadExecutor();
+    private final ExecutorService worker = Executors.newSingleThreadExecutor();
 
     private volatile boolean live = false;
     private long lastProactiveTime = 0;

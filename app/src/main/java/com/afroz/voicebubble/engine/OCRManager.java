@@ -7,6 +7,7 @@ import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -28,7 +29,7 @@ public class OCRManager {
     public OCRManager() {
         // One recognizer for the lifetime of the object (local, offline).
         try {
-            recognizer = TextRecognition.getClient();
+            recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         } catch (Exception e) {
             recognizer = null;
         }
