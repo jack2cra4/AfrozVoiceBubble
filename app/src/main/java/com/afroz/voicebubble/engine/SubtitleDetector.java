@@ -18,8 +18,8 @@ public class SubtitleDetector {
     private static final int MAX_LEN = 160;
 
     private String lastSubtitle = "";
-    private long lastStableTime = 0;
-    private String pending = "";
+    private String pendingNorm = "";
+    private long pendingSince = 0;
     private final long stableDelayMs;
 
     public SubtitleDetector(long stableDelayMs) {
@@ -27,38 +27,38 @@ public class SubtitleDetector {
     }
 
     /**
-     * Feed visible screen text; returns a NEW subtitle line (or null) when the
-     * subtitle changed and stabilised. Never returns the same subtitle twice.
+     * Feed visible screen text; returns a NEW subtitle line (or null) when a
+     * subtitle changed and stayed stable for {@code stableDelayMs}. A given
+     * subtitle is emitted exactly once and never repeated while unchanged.
      */
     public String next(String screenText) {
         if (screenText == null) return null;
         String candidate = pickSubtitle(screenText);
-        long now = System.currentTimeMillis();
-
         if (candidate == null) {
             return null;
         }
-
         String norm = normalize(candidate);
+
+        // Already spoken this exact subtitle -> never repeat it.
         if (norm.equals(lastSubtitle)) {
-            // Same subtitle still visible: once stable, stop reporting.
-            if (now - lastStableTime >= stableDelayMs && !pending.isEmpty()) {
-                pending = "";
-                return null;
+            return null;
+        }
+
+        long now = System.currentTimeMillis();
+        if (norm.equals(pendingNorm)) {
+            // Same new subtitle on screen: emit once it has stabilised.
+            if (now - pendingSince >= stableDelayMs) {
+                lastSubtitle = norm;
+                pendingNorm = "";
+                pendingSince = 0;
+                return candidate;
             }
             return null;
         }
 
-        // New subtitle: record, wait for it to stabilise briefly, then emit.
-        lastSubtitle = norm;
-        lastStableTime = now;
-        pending = candidate;
-        // Emit on the next stable frame (the caller will call repeatedly).
-        if (now - lastStableTime >= stableDelayMs) {
-            String out = pending;
-            pending = "";
-            return out;
-        }
+        // A brand new subtitle: start waiting for it to stabilise.
+        pendingNorm = norm;
+        pendingSince = now;
         return null;
     }
 
@@ -88,7 +88,7 @@ public class SubtitleDetector {
 
     public void reset() {
         lastSubtitle = "";
-        pending = "";
-        lastStableTime = 0;
+        pendingNorm = "";
+        pendingSince = 0;
     }
 }

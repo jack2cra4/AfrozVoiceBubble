@@ -63,7 +63,6 @@ public class LiveModeController {
         if (live) return;
         live = true;
         changeDetector.reset();
-        conversation.startReaction();
         conversation.getState().startLive();
         notifyState(conversation.getState().getState());
         if (ui != null) {

@@ -94,9 +94,10 @@ public class ScreenReaderAccessibilityService extends AccessibilityService {
                         // Rolling speech/screen snapshot for conversation
                         // context comprehension ("this issue" / "यह एरर").
                         App.get().getBrain().setScreenContext(text);
-                        // Feed the modular context/error analysis engine.
-                        App.get().getConversation().ingestScreenText(text);
-                        // In live mode, drive change detection + proactive.
+                        // In live mode, feed the modular engine ONCE (ingest +
+                        // change detection + proactive + subtitles + task
+                        // monitoring). Outside live mode we skip this so the
+                        // shared detector is not double-driven per event.
                         if (App.get().getLiveMode().isLive()) {
                             App.get().getLiveMode().onAccessibilityScreenText(text);
                         }

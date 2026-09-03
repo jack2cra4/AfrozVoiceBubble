@@ -20,20 +20,20 @@ import android.widget.TextView;
 
 import com.afroz.voicebubble.App;
 import com.afroz.voicebubble.R;
-import com.afroz.voicebubble.chat.WakeWordListener;
+import com.afroz.voicebubble.engine.ConversationLoop;
 import com.afroz.voicebubble.reader.ScreenReaderAccessibilityService;
 import com.afroz.voicebubble.speech.TtsEngine;
-import com.afroz.voicebubble.speech.TtsEngine.VoiceProfile;
 
 /**
  * Draggable, animated glowing orb (JARVIS).
  *
- * Houses the always-on conversational loop via {@link WakeWordListener}: the
- * assistant continuously listens and, on hearing the wake word
- * ("हेलो जार्विस" / "Hello Jarvis"), instantly halts any TTS, pulses the
- * bubble, replies in the deep male voice, and keeps listening for the
- * follow-up. A voice toggle on the overlay switches between the JARVIS Male
- * core and the Assistant Female voice.
+ * Houses the always-on conversational loop via {@link ConversationLoop}: while
+ * live, the assistant continuously listens and on hearing the wake word
+ * ("जार्विस" / "Hello Jarvis") instantly halts any TTS, pulses the bubble and
+ * replies, then keeps listening for the follow-up — which is routed through the
+ * full ConversationManager pipeline (agents, AI, tasks, translation). A voice
+ * toggle on the overlay switches between the JARVIS Male core and the Assistant
+ * Female voice through {@link com.afroz.voicebubble.engine.VoiceManager}.
  */
 public class FloatingBubbleService extends Service {
 
@@ -44,9 +44,8 @@ public class FloatingBubbleService extends Service {
     private WindowManager.LayoutParams cardParams;
     private int screenWidth, screenHeight;
     private Handler handler;
-    private WakeWordListener wakeListener;
+    private ConversationLoop loop;
     private boolean cardShowing = false;
-    private VoiceProfile currentProfile = VoiceProfile.JARVIS_MALE;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -80,20 +79,20 @@ public class FloatingBubbleService extends Service {
         startPulseAnimation();
         handleDrag();
 
-        // Default deep JARVIS male profile applied up front.
-        App.get().getTts().setProfile(VoiceProfile.JARVIS_MALE);
+        // Voice profile (male/female) is applied centrally via VoiceManager.
+        App.get().getVoiceManager().apply();
         App.get().getTts().prewarm();
 
         startConversationLoop();
     }
 
-    /** Boot the always-on conversational listener. */
+    /** Boot the always-on conversational listener routed through the new engine. */
     private void startConversationLoop() {
-        wakeListener = new WakeWordListener();
-        wakeListener.setCallback(new WakeWordListener.Callback() {
+        loop = new ConversationLoop(this, App.get().getConversation(), App.get().getTtsManager());
+        loop.setCallback(new ConversationLoop.Callback() {
             @Override
             public void onListening() {
-                // Keep the loop alive; optionally reflect in the card status.
+                // Keep the loop alive; the card reflects status already.
             }
 
             @Override
@@ -108,7 +107,7 @@ public class FloatingBubbleService extends Service {
                 setCardStatus(status);
             }
         });
-        wakeListener.start(this);
+        loop.start();
     }
 
     private void computeScreenSize() {
@@ -214,8 +213,8 @@ public class FloatingBubbleService extends Service {
 
             cardView.findViewById(R.id.jarvis_close).setOnClickListener(v -> hideCard());
             cardView.findViewById(R.id.jarvis_listen).setOnClickListener(v -> {
-                if (wakeListener != null && !wakeListener.isRunning()) {
-                    wakeListener.start(this);
+                if (loop != null && !loop.isRunning()) {
+                    loop.start();
                 }
             });
             cardView.findViewById(R.id.jarvis_read).setOnClickListener(v -> {
@@ -226,7 +225,7 @@ public class FloatingBubbleService extends Service {
             updateVoiceLabel(voiceBtn);
             voiceBtn.setOnClickListener(v -> toggleVoiceProfile(voiceBtn));
             cardView.findViewById(R.id.jarvis_stop).setOnClickListener(v -> {
-                if (wakeListener != null) wakeListener.stop();
+                if (loop != null) loop.stop();
                 App.get().getTts().stop();
                 setCardStatus(getString(R.string.status_ready));
             });
@@ -238,22 +237,19 @@ public class FloatingBubbleService extends Service {
     }
 
     private void toggleVoiceProfile(TextView voiceBtn) {
-        currentProfile = (currentProfile == VoiceProfile.JARVIS_MALE)
-                ? VoiceProfile.ASSISTANT_FEMALE
-                : VoiceProfile.JARVIS_MALE;
-        App.get().getTts().setProfile(currentProfile);
+        boolean male = !App.get().getVoiceManager().isMale();
+        App.get().getVoiceManager().setMale(male);
         updateVoiceLabel(voiceBtn);
-        String tag = currentProfile == VoiceProfile.JARVIS_MALE ? "hi" : "hi";
-        App.get().getTts().speak(
-                currentProfile == VoiceProfile.JARVIS_MALE
+        String lang = "hi";
+        App.get().getTts().speak(male
                         ? "जार्विस मेल वॉइस चालू"
                         : "असिस्टेंट फीमेल वॉइस चालू",
-                tag);
+                lang);
     }
 
     private void updateVoiceLabel(TextView voiceBtn) {
         if (voiceBtn != null) {
-            boolean male = (currentProfile == VoiceProfile.JARVIS_MALE);
+            boolean male = App.get().getVoiceManager().isMale();
             voiceBtn.setText(male ? getString(R.string.voice_male)
                                   : getString(R.string.voice_female));
         }
@@ -308,9 +304,9 @@ public class FloatingBubbleService extends Service {
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
-        if (wakeListener != null) {
-            wakeListener.destroy();
-            wakeListener = null;
+        if (loop != null) {
+            loop.destroy();
+            loop = null;
         }
         if (cardView != null && windowManager != null) {
             try {

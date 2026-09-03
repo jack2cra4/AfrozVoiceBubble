@@ -35,17 +35,35 @@ public class LocalMemory {
         prefs.edit().putString(KEY_NAME, name == null ? "" : name.trim()).apply();
     }
 
+    /**
+     * Language mode read in the shared "hi"/"en"/"auto" encoding so it stays
+     * consistent with {@link SettingsManager} (same prefs file). Older enum
+     * values ("HINDI"/"ENGLISH"/"AUTO") are mapped for backward compatibility.
+     */
     public LanguageMode getLanguageMode() {
-        String v = prefs.getString(KEY_LANG, "AUTO");
-        try {
-            return LanguageMode.valueOf(v);
-        } catch (Exception e) {
-            return LanguageMode.AUTO;
+        String v = prefs.getString(KEY_LANG, "auto");
+        if (v == null) return LanguageMode.AUTO;
+        switch (v.toLowerCase()) {
+            case "hi":
+            case "hindi":
+                return LanguageMode.HINDI;
+            case "en":
+            case "english":
+                return LanguageMode.ENGLISH;
+            case "auto":
+            default:
+                return LanguageMode.AUTO;
         }
     }
 
     public void setLanguageMode(LanguageMode mode) {
-        prefs.edit().putString(KEY_LANG, mode.name()).apply();
+        String v;
+        switch (mode) {
+            case HINDI: v = "hi"; break;
+            case ENGLISH: v = "en"; break;
+            default: v = "auto"; break;
+        }
+        prefs.edit().putString(KEY_LANG, v).apply();
     }
 
     public boolean isMaleVoice() {

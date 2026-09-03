@@ -58,6 +58,9 @@ public class ConversationManager {
     // Task being actively monitored (id or null).
     private volatile String monitoredTaskId = null;
 
+    // Set when the user issued a "stop" voice command.
+    private volatile boolean stopCommand = false;
+
     public interface WakeHook {
         void onWakeDetected();
     }
@@ -201,6 +204,7 @@ public class ConversationManager {
 
     public String respondToSpeech(String text, String detectedLang) {
         if (text == null) return "";
+        stopCommand = false;
         lastLanguage = "hi".equals(detectedLang) ? "hi" : "en";
 
         if (wakeWordManager.isWake(text)) {
@@ -253,10 +257,18 @@ public class ConversationManager {
         }
 
         // Offline local interpretation otherwise.
+        stopCommand = (parsed.intent == IntentParser.Intent.STOP_ASSISTANT);
         String response = responseGenerator.respond(parsed.intent, resolveLang(),
                 lastScreenContext, lastError);
         stateManager.onSpeaking();
         return response;
+    }
+
+    /** True if the last utterance was a "stop" command; resets on read. */
+    public boolean consumeStopCommand() {
+        boolean v = stopCommand;
+        stopCommand = false;
+        return v;
     }
 
     private String routeAgentAnswer(String text) {

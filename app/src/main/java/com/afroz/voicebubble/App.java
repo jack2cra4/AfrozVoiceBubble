@@ -61,6 +61,19 @@ public class App extends Application {
                 stateManager, agentManager, providerManager, taskManager, translationManager,
                 subtitleDetector, memoryManager, jarvisBrain);
         liveMode = new LiveModeController(this, memory, conversation, settingsManager);
+        // Wire live-mode announcements / proactive alerts through the central
+        // TTS path so they actually speak (and respect mute + language).
+        liveMode.setUi(new LiveModeController.Ui() {
+            @Override
+            public void speak(String text, String lang) {
+                ttsManager.speak(text, lang);
+            }
+
+            @Override
+            public void onState(com.afroz.voicebubble.engine.JarvisStateManager.State s) {
+                // The dashboard already reflects the shared state machine.
+            }
+        });
 
         voiceManager.apply();
         ttsManager.applyConfiguredVoice();

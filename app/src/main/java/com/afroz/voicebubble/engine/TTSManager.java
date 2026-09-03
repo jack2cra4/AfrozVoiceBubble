@@ -1,6 +1,7 @@
 package com.afroz.voicebubble.engine;
 
 import android.content.Context;
+import android.speech.tts.UtteranceProgressListener;
 
 import com.afroz.voicebubble.speech.TtsEngine;
 import com.afroz.voicebubble.speech.TtsEngine.VoiceProfile;
@@ -22,10 +23,36 @@ public class TTSManager {
     private final TtsEngine engine;
     private final LocalMemory memory;
     private boolean speaking = false;
+    private Runnable onSpeechDone;
 
     public TTSManager(TtsEngine engine, LocalMemory memory) {
         this.engine = engine;
         this.memory = memory;
+        // Keep the "speaking" flag accurate so the UI state reflects reality
+        // (clears on done/error, so isSpeaking() is not stuck true forever).
+        engine.setListener(new UtteranceProgressListener() {
+            @Override public void onStart(String utteranceId) { speaking = true; }
+            @Override public void onDone(String utteranceId) {
+                speaking = false;
+                Runnable r = onSpeechDone;
+                if (r != null) r.run();
+            }
+            @Override public void onError(String utteranceId) {
+                speaking = false;
+                Runnable r = onSpeechDone;
+                if (r != null) r.run();
+            }
+            @Override @Deprecated public void onError(String utteranceId, int errorCode) {
+                speaking = false;
+                Runnable r = onSpeechDone;
+                if (r != null) r.run();
+            }
+        });
+    }
+
+    /** Register a callback fired (on the TTS thread) after speech completes/stops. */
+    public void setOnSpeechDone(Runnable r) {
+        this.onSpeechDone = r;
     }
 
     public TtsEngine raw() {
