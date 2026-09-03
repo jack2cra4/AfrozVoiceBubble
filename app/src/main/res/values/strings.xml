@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AfrozVoiceBubble</string>
+    <string name="accessibility_service_description">AfrozVoiceBubble Screen Reader: Reads on-screen text and subtitles aloud in Hindi, and detects and explains common Termux/Linux terminal errors. 100% offline and private.</string>
+    <string name="bubble_start">नमस्ते, मैं हिंदी में बोलती हूँ। बबल को छूकर स्क्रीन रीडर चालू करें।</string>
+    <string name="bubble_reader_on">स्क्रीन रीडर चालू</string>
+    <string name="bubble_reader_off">स्क्रीन रीडर बंद</string>
+    <string name="bubble_btn_label">स्कैन</string>
+    <string name="no_text_found">स्क्रीन पर कोई पाठ नहीं मिला।</string>
+    <string name="launch_bubble">बबल चालू करें</string>
+    <string name="stop_bubble">बबल बंद करें</string>
+    <string name="title_activity">AfrozVoiceBubble</string>
+</resources>

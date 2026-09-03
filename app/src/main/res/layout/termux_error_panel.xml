@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/error_panel"
+    android:layout_width="280dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/panel_bg"
+    android:padding="12dp"
+    android:elevation="8dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+        android:id="@+id/error_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Termux एरर हेल्पर"
+        android:textColor="@color/bubble_blue"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="6dp" />
+
+    <TextView
+        android:id="@+id/error_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_error"
+        android:textSize="12sp"
+        android:fontFamily="monospace"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:background="#FF111111"
+        android:padding="6dp"
+        android:layout_marginBottom="6dp" />
+
+    <TextView
+        android:id="@+id/fix_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_fix"
+        android:textSize="13sp"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <TextView
+            android:id="@+id/speak_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="34dp"
+            android:gravity="center"
+            android:text="बोलो"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:background="@drawable/bubble_bg"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:id="@+id/close_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="34dp"
+            android:gravity="center"
+            android:text="बंद"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:background="@color/bubble_dark"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
+
+</LinearLayout>
